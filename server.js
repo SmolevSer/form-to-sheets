@@ -66,7 +66,8 @@ async function writeReference(filename, data) {
 async function addToGoogleSheets(formData) {
     try {
         const serviceAccountAuth = new JWT({
-            key: process.env.GOOGLE_CREDENTIALS ? JSON.parse(process.env.GOOGLE_CREDENTIALS) : undefined,
+            key: process.env.GOOGLE_CREDENTIALS ? JSON.parse(process.env.GOOGLE_CREDENTIALS).private_key : undefined,
+            email: process.env.GOOGLE_CREDENTIALS ? JSON.parse(process.env.GOOGLE_CREDENTIALS).client_email : undefined,
             keyFile: process.env.GOOGLE_CREDENTIALS ? undefined : path.join(__dirname, 'credentials.json'),
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
@@ -106,7 +107,8 @@ async function addToGoogleSheets(formData) {
 async function markOperationAsDeleted(operationId, timestamp) {
     try {
         const serviceAccountAuth = new JWT({
-            key: process.env.GOOGLE_CREDENTIALS ? JSON.parse(process.env.GOOGLE_CREDENTIALS) : undefined,
+            key: process.env.GOOGLE_CREDENTIALS ? JSON.parse(process.env.GOOGLE_CREDENTIALS).private_key : undefined,
+            email: process.env.GOOGLE_CREDENTIALS ? JSON.parse(process.env.GOOGLE_CREDENTIALS).client_email : undefined,
             keyFile: process.env.GOOGLE_CREDENTIALS ? undefined : path.join(__dirname, 'credentials.json'),
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
