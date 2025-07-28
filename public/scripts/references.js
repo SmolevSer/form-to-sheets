@@ -10,18 +10,18 @@ async function loadReferences() {
     console.log('Загружаем справочники...');
     
     const [expenseResponse, incomeResponse, contractorsResponse] = await Promise.all([
-      fetch('/expense-articles'),
-      fetch('/income-articles'),
-      fetch('/contractors')
+      fetch('/api/articles/expense'),
+      fetch('/api/articles/income'),
+      fetch('/api/contractors')
     ]);
     
-    const expenseData = await expenseResponse.text();
-    const incomeData = await incomeResponse.text();
-    const contractorsData = await contractorsResponse.text();
+    const expenseData = await expenseResponse.json();
+    const incomeData = await incomeResponse.json();
+    const contractorsData = await contractorsResponse.json();
     
-    articlesExpenseCategories = parseArticlesData(expenseData);
-    articlesIncomeCategories = parseArticlesData(incomeData);
-    contractorsCategories = parseContractorsData(contractorsData);
+    articlesExpenseCategories = expenseData.success ? expenseData.data : {};
+    articlesIncomeCategories = incomeData.success ? incomeData.data : {};
+    contractorsCategories = contractorsData.success ? contractorsData.data : {};
     
     console.log('Справочники загружены');
     console.log('Статьи расходов:', articlesExpenseCategories);
@@ -284,12 +284,12 @@ async function addNewContractor(type) {
   }
   
   try {
-    const response = await fetch('/add-contractor', {
+    const response = await fetch('/api/contractors/add', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name: contractorName })
+      body: JSON.stringify({ contractor: contractorName })
     });
     
     const result = await response.json();

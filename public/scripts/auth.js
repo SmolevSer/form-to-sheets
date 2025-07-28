@@ -89,7 +89,7 @@ async function authenticate() {
   }
   
   try {
-    const response = await fetch('/authenticate', {
+    const response = await fetch('/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
