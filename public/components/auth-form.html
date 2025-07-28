@@ -1,0 +1,14 @@
+<!-- Форма аутентификации -->
+<div id="auth-form">
+  <h2>Вход в систему учета операций</h2>
+  <div class="form-group">
+    <label for="login">Логин:</label>
+    <input type="text" id="login" required>
+  </div>
+  <div class="form-group">
+    <label for="password">Пароль:</label>
+    <input type="password" id="password" required>
+  </div>
+  <button class="btn submit" onclick="authenticate()">Войти</button>
+  <div id="auth-error" class="error"></div>
+</div>

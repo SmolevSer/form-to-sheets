@@ -1,0 +1,203 @@
+<!-- Блок "Перевод между счетами" -->
+<div id="transfer-internal-block" class="section hidden">
+  <div class="section-title">Перевод между счетами</div>
+  
+  <div class="form-group">
+    <label for="amount-internal">Сумма:</label>
+    <input type="number" id="amount-internal" class="amount-input" step="0.01" placeholder="0,00">
+  </div>
+
+  <div class="form-group">
+    <label for="payment-date-internal">Дата оплаты:</label>
+    <input type="date" id="payment-date-internal" class="date-input">
+  </div>
+
+  <div class="form-group">
+    <label for="target-account-internal">Счет для зачисления:</label>
+    <select id="target-account-internal">
+      <option value="">-- Выберите счет --</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="comment-internal">Комментарии:</label>
+    <textarea id="comment-internal" rows="3"></textarea>
+  </div>
+
+  <div class="info-text">
+    В данной форме отражается только переводы между счетами одной компании.
+  </div>
+</div>
+
+<!-- Блок "Перевод между СВОИМИ компаниями" -->
+<div id="transfer-company-block" class="section hidden">
+  <div class="section-title">Перевод между СВОИМИ компаниями</div>
+  
+  <div class="form-group">
+    <label for="amount-company">Сумма:</label>
+    <input type="number" id="amount-company" class="amount-input" step="0.01" placeholder="0,00">
+  </div>
+
+  <div class="form-group">
+    <label for="payment-date-company">Дата оплаты:</label>
+    <input type="date" id="payment-date-company" class="date-input">
+  </div>
+
+  <div class="form-group">
+    <label for="target-company">Компания получатель:</label>
+    <select id="target-company">
+      <option value="">-- Выберите компанию --</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="target-account-company">Счет для зачисления:</label>
+    <select id="target-account-company">
+      <option value="">-- Выберите счет --</option>
+      <option value="Касса">Касса</option>
+      <option value="ИП-3564">ИП-3564</option>
+      <option value="ИП-7435">ИП-7435</option>
+      <option value="ИП-Акбарс">ИП-Акбарс</option>
+      <option value="АНО-Сбер">АНО-Сбер</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="comment-company">Комментарии:</label>
+    <textarea id="comment-company" rows="3"></textarea>
+  </div>
+
+  <div class="info-text">
+    В данной форме отражается только РАСХОДНАЯ операция по счету. Приход на указанную компанию будет отражен автоматически, ее вводить (дублировать) не нужно.
+  </div>
+</div>
+
+<!-- Блок "Расход" -->
+<div id="expense-block" class="section hidden">
+  <div class="section-title">Расход</div>
+  
+  <div class="form-group">
+    <label for="amount-expense">Сумма:</label>
+    <input type="number" id="amount-expense" class="amount-input" step="0.01" placeholder="0,00">
+  </div>
+
+  <div class="form-group">
+    <label for="payment-date-expense">Дата оплаты:</label>
+    <input type="date" id="payment-date-expense" class="date-input">
+  </div>
+
+  <div class="form-group">
+    <label for="accrual-date-expense">Дата начисления:</label>
+    <input type="date" id="accrual-date-expense" class="date-input">
+  </div>
+
+  <div class="form-group">
+    <label for="article-expense">Статья:</label>
+    <div class="search-container">
+      <select id="article-expense" class="search-input">
+        <option value="">-- Выберите статью --</option>
+      </select>
+      <button class="btn add-btn" onclick="toggleSearch('article-expense')">🔍</button>
+    </div>
+    <div id="search-article-expense" class="hidden" style="position: relative; margin-top: 5px;">
+      <input type="text" placeholder="Поиск статьи..." onkeyup="searchArticles('expense', this.value)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <div id="search-results-article-expense" class="search-results"></div>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="contractor-expense">Контрагент:</label>
+    <div class="search-container">
+      <select id="contractor-expense" class="search-input">
+        <option value="">-- Выберите контрагента --</option>
+      </select>
+      <button class="btn add-btn" onclick="toggleSearch('contractor-expense')">🔍</button>
+      <button class="btn add-btn" onclick="showAddContractor('expense')">+</button>
+    </div>
+    <div id="search-contractor-expense" class="hidden" style="position: relative; margin-top: 5px;">
+      <input type="text" placeholder="Поиск контрагента..." onkeyup="searchContractors(this.value, 'expense')" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <div id="search-results-contractor-expense" class="search-results"></div>
+    </div>
+    <div id="add-contractor-expense" class="inline-add hidden">
+      <input type="text" id="new-contractor-expense" placeholder="Название нового контрагента">
+      <button class="btn add-btn" onclick="addNewContractor('expense')">Добавить</button>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="comment-expense">Комментарии:</label>
+    <textarea id="comment-expense" rows="3"></textarea>
+  </div>
+
+  <div class="info-text">
+    В данной форме отражаются только расходные операции.
+  </div>
+</div>
+
+<!-- Блок "Приход" -->
+<div id="income-block" class="section hidden">
+  <div class="section-title">Приход</div>
+  
+  <div class="form-group">
+    <label for="amount-income">Сумма:</label>
+    <input type="number" id="amount-income" class="amount-input" step="0.01" placeholder="0,00">
+  </div>
+
+  <div class="form-group">
+    <label for="payment-date-income">Дата оплаты:</label>
+    <input type="date" id="payment-date-income" class="date-input">
+  </div>
+
+  <div class="form-group">
+    <label for="accrual-date-income">Дата начисления:</label>
+    <input type="date" id="accrual-date-income" class="date-input">
+  </div>
+
+  <div class="form-group">
+    <label for="article-income">Статья:</label>
+    <div class="search-container">
+      <select id="article-income" class="search-input">
+        <option value="">-- Выберите статью --</option>
+      </select>
+      <button class="btn add-btn" onclick="toggleSearch('article-income')">🔍</button>
+    </div>
+    <div id="search-article-income" class="hidden" style="position: relative; margin-top: 5px;">
+      <input type="text" placeholder="Поиск статьи..." onkeyup="searchArticles('income', this.value)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <div id="search-results-article-income" class="search-results"></div>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="contractor-income">Контрагент:</label>
+    <div class="search-container">
+      <select id="contractor-income" class="search-input">
+        <option value="">-- Выберите контрагента --</option>
+      </select>
+      <button class="btn add-btn" onclick="toggleSearch('contractor-income')">🔍</button>
+      <button class="btn add-btn" onclick="showAddContractor('income')">+</button>
+    </div>
+    <div id="search-contractor-income" class="hidden" style="position: relative; margin-top: 5px;">
+      <input type="text" placeholder="Поиск контрагента..." onkeyup="searchContractors(this.value, 'income')" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <div id="search-results-contractor-income" class="search-results"></div>
+    </div>
+    <div id="add-contractor-income" class="inline-add hidden">
+      <input type="text" id="new-contractor-income" placeholder="Название нового контрагента">
+      <button class="btn add-btn" onclick="addNewContractor('income')">Добавить</button>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="comment-income">Комментарии:</label>
+    <textarea id="comment-income" rows="3"></textarea>
+  </div>
+
+  <div class="info-text">
+    В данной форме отражается только приходные операции.
+  </div>
+</div>
+
+<!-- Кнопка отправки -->
+<div id="submit-section" class="section hidden">
+  <button class="btn submit" onclick="submitForm()">Сохранить операцию</button>
+  <button class="btn" onclick="resetForm()" style="margin-left: 20px;">Очистить форму</button>
+</div>
