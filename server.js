@@ -22,57 +22,133 @@ async function addToAccountSheet(formData) {
         const doc = new GoogleSpreadsheet(GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
 
-        // Формируем строку для листа счета
-        const row = {
-            'Дата и время': formData.timestamp,
-            'Тип операции': formData.operation,
-            'Приход': '',
-            'Расход': '',
-            'Остаток на начало дня': '',
-            'Остаток текущий': '',
-            'Контрагент': formData.contractor || '',
-            'Статус': formData.status || 'активна',
-            'Комментарии': formData.comments || ''
-        };
+        // Вспомогательная функция для расчета остатков
+        async function getLastBalance(sheet) {
+            const rows = await sheet.getRows();
+            if (rows.length === 0) return 0;
+            // Берем последний непустой "Остаток текущий"
+            for (let i = rows.length - 1; i >= 0; i--) {
+                const val = rows[i]['Остаток текущий'];
+                if (val !== undefined && val !== null && val !== '') {
+                    return parseFloat(val) || 0;
+                }
+            }
+            return 0;
+        }
+
+        // Универсальная функция добавления строки с расчетом остатков
+        async function addRowWithBalance(sheet, row, isStartOfDay = false) {
+            const lastBalance = await getLastBalance(sheet);
+            if (isStartOfDay) {
+                row['Остаток на начало дня'] = lastBalance;
+                row['Остаток текущий'] = lastBalance;
+            } else {
+                row['Остаток на начало дня'] = '';
+                let prihod = parseFloat(row['Приход'] || 0) || 0;
+                let rashod = parseFloat(row['Расход'] || 0) || 0;
+                row['Остаток текущий'] = (lastBalance + prihod - rashod).toFixed(2);
+            }
+            await sheet.addRow(row);
+        }
 
         // Определяем, в какой лист и в какие столбцы писать
         if (formData.operation === 'Приход') {
             // Приход — в лист выбранного счета, сумма в "Приход"
             const sheet = doc.sheetsByTitle[formData.accountDebit];
             if (sheet) {
-                row['Приход'] = formData.amount || '';
-                await sheet.addRow(row);
+                const row = {
+                    'Дата и время': formData.timestamp,
+                    'Тип операции': formData.operation,
+                    'Приход': formData.amount || '',
+                    'Расход': '',
+                    'Остаток на начало дня': '',
+                    'Остаток текущий': '',
+                    'Контрагент': formData.contractor || '',
+                    'Статус': formData.status || 'активна',
+                    'Комментарии': formData.comments || ''
+                };
+                await addRowWithBalance(sheet, row);
             }
         } else if (formData.operation === 'Расход') {
             // Расход — в лист выбранного счета, сумма в "Расход"
             const sheet = doc.sheetsByTitle[formData.accountDebit];
             if (sheet) {
-                row['Расход'] = formData.amount || '';
-                await sheet.addRow(row);
+                const row = {
+                    'Дата и время': formData.timestamp,
+                    'Тип операции': formData.operation,
+                    'Приход': '',
+                    'Расход': formData.amount || '',
+                    'Остаток на начало дня': '',
+                    'Остаток текущий': '',
+                    'Контрагент': formData.contractor || '',
+                    'Статус': formData.status || 'активна',
+                    'Комментарии': formData.comments || ''
+                };
+                await addRowWithBalance(sheet, row);
             }
         } else if (formData.operation === 'Перевод между счетами') {
             // Списание — из accountDebit, приход — в accountCredit
             const sheetDebit = doc.sheetsByTitle[formData.accountDebit];
             const sheetCredit = doc.sheetsByTitle[formData.accountCredit];
             if (sheetDebit) {
-                let rowDebit = { ...row, 'Расход': formData.amount || '', 'Тип операции': 'Перевод (списание)' };
-                await sheetDebit.addRow(rowDebit);
+                let rowDebit = {
+                    'Дата и время': formData.timestamp,
+                    'Тип операции': 'Перевод (списание)',
+                    'Приход': '',
+                    'Расход': formData.amount || '',
+                    'Остаток на начало дня': '',
+                    'Остаток текущий': '',
+                    'Контрагент': formData.contractor || '',
+                    'Статус': formData.status || 'активна',
+                    'Комментарии': formData.comments || ''
+                };
+                await addRowWithBalance(sheetDebit, rowDebit);
             }
             if (sheetCredit) {
-                let rowCredit = { ...row, 'Приход': formData.amount || '', 'Тип операции': 'Перевод (зачисление)' };
-                await sheetCredit.addRow(rowCredit);
+                let rowCredit = {
+                    'Дата и время': formData.timestamp,
+                    'Тип операции': 'Перевод (зачисление)',
+                    'Приход': formData.amount || '',
+                    'Расход': '',
+                    'Остаток на начало дня': '',
+                    'Остаток текущий': '',
+                    'Контрагент': formData.contractor || '',
+                    'Статус': formData.status || 'активна',
+                    'Комментарии': formData.comments || ''
+                };
+                await addRowWithBalance(sheetCredit, rowCredit);
             }
         } else if (formData.operation === 'Перевод между СВОИМИ компаниями') {
             // Аналогично переводу между счетами
             const sheetDebit = doc.sheetsByTitle[formData.accountDebit];
             const sheetCredit = doc.sheetsByTitle[formData.accountCredit];
             if (sheetDebit) {
-                let rowDebit = { ...row, 'Расход': formData.amount || '', 'Тип операции': 'Перевод между компаниями (списание)' };
-                await sheetDebit.addRow(rowDebit);
+                let rowDebit = {
+                    'Дата и время': formData.timestamp,
+                    'Тип операции': 'Перевод между компаниями (списание)',
+                    'Приход': '',
+                    'Расход': formData.amount || '',
+                    'Остаток на начало дня': '',
+                    'Остаток текущий': '',
+                    'Контрагент': formData.contractor || '',
+                    'Статус': formData.status || 'активна',
+                    'Комментарии': formData.comments || ''
+                };
+                await addRowWithBalance(sheetDebit, rowDebit);
             }
             if (sheetCredit) {
-                let rowCredit = { ...row, 'Приход': formData.amount || '', 'Тип операции': 'Перевод между компаниями (зачисление)' };
-                await sheetCredit.addRow(rowCredit);
+                let rowCredit = {
+                    'Дата и время': formData.timestamp,
+                    'Тип операции': 'Перевод между компаниями (зачисление)',
+                    'Приход': formData.amount || '',
+                    'Расход': '',
+                    'Остаток на начало дня': '',
+                    'Остаток текущий': '',
+                    'Контрагент': formData.contractor || '',
+                    'Статус': formData.status || 'активна',
+                    'Комментарии': formData.comments || ''
+                };
+                await addRowWithBalance(sheetCredit, rowCredit);
             }
         }
         return { success: true };
