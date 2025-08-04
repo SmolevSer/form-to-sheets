@@ -13,6 +13,9 @@ const ACCOUNT_SHEET_NAMES = [
 // Добавление операции в нужный лист счета с учетом правильного расчета остатков
 async function addToAccountSheet(formData) {
     try {
+        // Логируем входящие данные для диагностики
+        console.log('addToAccountSheet formData:', JSON.stringify(formData));
+
         const serviceAccountAuth = new JWT({
             key: process.env.GOOGLE_CREDENTIALS ? JSON.parse(process.env.GOOGLE_CREDENTIALS).private_key : undefined,
             email: process.env.GOOGLE_CREDENTIALS ? JSON.parse(process.env.GOOGLE_CREDENTIALS).client_email : undefined,
@@ -25,7 +28,21 @@ async function addToAccountSheet(formData) {
         // Вспомогательная функция: получить строку с 00:00:00 текущего дня
         function getDayStartString(dateStr) {
             // dateStr: '2025-08-05T14:23:00' или '2025-08-05 14:23:00'
-            const d = new Date(dateStr.replace(' ', 'T'));
+            if (!dateStr || typeof dateStr !== 'string') {
+                console.error('getDayStartString: пустая или невалидная дата', dateStr);
+                return '';
+            }
+            let d;
+            try {
+                d = new Date(dateStr.replace(' ', 'T'));
+            } catch (e) {
+                console.error('getDayStartString: ошибка преобразования даты', dateStr, e);
+                return '';
+            }
+            if (isNaN(d.getTime())) {
+                console.error('getDayStartString: некорректная дата', dateStr);
+                return '';
+            }
             return d.toISOString().slice(0, 10) + 'T00:00:00';
         }
 
