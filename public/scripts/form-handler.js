@@ -148,13 +148,10 @@ function updateTransferCompanyOptions() {
 function resetFromOperation() {
   selectedOperation = '';
   selectedAccount = '';
-  
-  // Скрываем все секции после выбора компании
-  document.getElementById('operation-section').classList.add('hidden');
+  // Скрываем только секцию выбора счета и все блоки операций
   document.getElementById('account-section').classList.add('hidden');
   hideAllOperationBlocks();
-  
-  // Сбрасываем активные кнопки
+  // Сбрасываем активные кнопки операций и счетов
   document.querySelectorAll('#operation-section .btn, #account-section .btn').forEach(btn => {
     btn.classList.remove('active');
   });
