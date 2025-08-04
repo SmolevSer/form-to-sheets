@@ -356,12 +356,19 @@ function validateIncome() {
 
 // Формирование данных операции
 function getOperationData() {
+  // Форматируем дату и время по шаблону DD.MM.YYYY HH:mm:ss
+  function formatDateTime(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    const pad = n => n.toString().padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
   const baseData = {
     company: selectedCompany,
     operation: selectedOperation,
     account: selectedAccount,
     user: currentUser,
-    timestamp: new Date().toISOString()
+    timestamp: formatDateTime(new Date())
   };
   
   if (selectedOperation === 'Перевод между счетами') {
@@ -369,8 +376,9 @@ function getOperationData() {
       ...baseData,
       amount: document.getElementById('amount-internal').value,
       paymentDate: document.getElementById('payment-date-internal').value,
-      targetAccount: document.getElementById('target-account-internal').value,
-      comment: document.getElementById('comment-internal').value
+      accountDebit: selectedAccount,
+      accountCredit: document.getElementById('target-account-internal').value,
+      comments: document.getElementById('comment-internal').value
     };
   } else if (selectedOperation === 'Перевод между СВОИМИ компаниями') {
     return {
@@ -378,8 +386,9 @@ function getOperationData() {
       amount: document.getElementById('amount-company').value,
       paymentDate: document.getElementById('payment-date-company').value,
       targetCompany: document.getElementById('target-company').value,
-      targetAccount: document.getElementById('target-account-company').value,
-      comment: document.getElementById('comment-company').value
+      accountDebit: selectedAccount,
+      accountCredit: document.getElementById('target-account-company').value,
+      comments: document.getElementById('comment-company').value
     };
   } else if (selectedOperation === 'Расход') {
     return {
@@ -389,7 +398,8 @@ function getOperationData() {
       accrualDate: document.getElementById('accrual-date-expense').value,
       article: document.getElementById('article-expense').value,
       contractor: document.getElementById('contractor-expense').value,
-      comment: document.getElementById('comment-expense').value
+      accountDebit: selectedAccount,
+      comments: document.getElementById('comment-expense').value
     };
   } else if (selectedOperation === 'Приход') {
     return {
@@ -399,7 +409,8 @@ function getOperationData() {
       accrualDate: document.getElementById('accrual-date-income').value,
       article: document.getElementById('article-income').value,
       contractor: document.getElementById('contractor-income').value,
-      comment: document.getElementById('comment-income').value
+      accountDebit: selectedAccount,
+      comments: document.getElementById('comment-income').value
     };
   }
   
