@@ -10,7 +10,7 @@ const ACCOUNT_SHEET_NAMES = [
   'АНО-Сбер'
 ];
 
-// Добавление операции в нужный лист счета
+// Добавление операции в нужный лист счета с учетом правильного расчета остатков
 async function addToAccountSheet(formData) {
     try {
         const serviceAccountAuth = new JWT({
@@ -22,38 +22,73 @@ async function addToAccountSheet(formData) {
         const doc = new GoogleSpreadsheet(GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
 
-        // Вспомогательная функция для расчета остатков
-        async function getLastBalance(sheet) {
+        // Вспомогательная функция: получить строку с 00:00:00 текущего дня
+        function getDayStartString(dateStr) {
+            // dateStr: '2025-08-05T14:23:00' или '2025-08-05 14:23:00'
+            const d = new Date(dateStr.replace(' ', 'T'));
+            return d.toISOString().slice(0, 10) + 'T00:00:00';
+        }
+
+        // Получить "Остаток на начало дня" из строки 00:00:00 текущего дня
+        async function getStartOfDayBalance(sheet, dateStr) {
             const rows = await sheet.getRows();
-            if (rows.length === 0) return 0;
-            // Берем последний непустой "Остаток текущий"
-            for (let i = rows.length - 1; i >= 0; i--) {
-                const val = rows[i]['Остаток текущий'];
-                if (val !== undefined && val !== null && val !== '') {
-                    return parseFloat(val) || 0;
+            const dayStart = getDayStartString(dateStr);
+            for (let i = 0; i < rows.length; i++) {
+                const rowDate = rows[i]['Дата и время'];
+                if (rowDate && (rowDate.startsWith(dayStart) || rowDate.startsWith(dayStart.replace('T', ' ')))) {
+                    // Берем "Остаток на начало дня" из строки 00:00:00
+                    const val = rows[i]['Остаток на начало дня'];
+                    return val !== undefined && val !== null && val !== '' ? parseFloat(val) : 0;
                 }
             }
             return 0;
         }
 
-        // Универсальная функция добавления строки с расчетом остатков
-        async function addRowWithBalance(sheet, row, isStartOfDay = false) {
-            const lastBalance = await getLastBalance(sheet);
-            if (isStartOfDay) {
-                row['Остаток на начало дня'] = lastBalance;
-                row['Остаток текущий'] = lastBalance;
-            } else {
-                row['Остаток на начало дня'] = '';
-                let prihod = parseFloat(row['Приход'] || 0) || 0;
-                let rashod = parseFloat(row['Расход'] || 0) || 0;
-                row['Остаток текущий'] = (lastBalance + prihod - rashod).toFixed(2);
+        // Получить "Остаток текущий" предыдущей строки (последней по времени)
+        async function getPrevCurrentBalance(sheet) {
+            const rows = await sheet.getRows();
+            if (rows.length === 0) return 0;
+            const last = rows[rows.length - 1];
+            const val = last['Остаток текущий'];
+            return val !== undefined && val !== null && val !== '' ? parseFloat(val) : 0;
+        }
+
+        // Добавить строку в лист счета с расчетом остатков
+        async function addRowWithCorrectBalances(sheet, row) {
+            const rows = await sheet.getRows();
+            // 1. Определяем остаток на начало дня
+            let startOfDayBalance = 0;
+            const dayStart = getDayStartString(row['Дата и время']);
+            let foundStartOfDay = false;
+            for (let i = 0; i < rows.length; i++) {
+                const rowDate = rows[i]['Дата и время'];
+                if (rowDate && (rowDate.startsWith(dayStart) || rowDate.startsWith(dayStart.replace('T', ' ')))) {
+                    startOfDayBalance = rows[i]['Остаток на начало дня'] !== undefined && rows[i]['Остаток на начало дня'] !== '' ? parseFloat(rows[i]['Остаток на начало дня']) : 0;
+                    foundStartOfDay = true;
+                    break;
+                }
             }
+            row['Остаток на начало дня'] = startOfDayBalance;
+
+            // 2. Определяем остаток текущий
+            let prevBalance = 0;
+            if (rows.length > 0) {
+                prevBalance = rows[rows.length - 1]['Остаток текущий'] !== undefined && rows[rows.length - 1]['Остаток текущий'] !== '' ? parseFloat(rows[rows.length - 1]['Остаток текущий']) : 0;
+            }
+            let prihod = parseFloat(row['Приход'] || 0) || 0;
+            let rashod = parseFloat(row['Расход'] || 0) || 0;
+            row['Остаток текущий'] = (prevBalance + prihod - rashod).toFixed(2);
+
             await sheet.addRow(row);
         }
 
-        // Определяем, в какой лист и в какие столбцы писать
+        // Универсальная функция для добавления операции в нужный лист
+        async function addOperationToSheet(sheet, row) {
+            await addRowWithCorrectBalances(sheet, row);
+        }
+
+        // --- Операции ---
         if (formData.operation === 'Приход') {
-            // Приход — в лист выбранного счета, сумма в "Приход"
             const sheet = doc.sheetsByTitle[formData.accountDebit];
             if (sheet) {
                 const row = {
@@ -67,10 +102,9 @@ async function addToAccountSheet(formData) {
                     'Статус': formData.status || 'активна',
                     'Комментарии': formData.comments || ''
                 };
-                await addRowWithBalance(sheet, row);
+                await addOperationToSheet(sheet, row);
             }
         } else if (formData.operation === 'Расход') {
-            // Расход — в лист выбранного счета, сумма в "Расход"
             const sheet = doc.sheetsByTitle[formData.accountDebit];
             if (sheet) {
                 const row = {
@@ -84,7 +118,7 @@ async function addToAccountSheet(formData) {
                     'Статус': formData.status || 'активна',
                     'Комментарии': formData.comments || ''
                 };
-                await addRowWithBalance(sheet, row);
+                await addOperationToSheet(sheet, row);
             }
         } else if (formData.operation === 'Перевод между счетами') {
             // Списание — из accountDebit, приход — в accountCredit
@@ -102,7 +136,7 @@ async function addToAccountSheet(formData) {
                     'Статус': formData.status || 'активна',
                     'Комментарии': formData.comments || ''
                 };
-                await addRowWithBalance(sheetDebit, rowDebit);
+                await addOperationToSheet(sheetDebit, rowDebit);
             }
             if (sheetCredit) {
                 let rowCredit = {
@@ -116,7 +150,7 @@ async function addToAccountSheet(formData) {
                     'Статус': formData.status || 'активна',
                     'Комментарии': formData.comments || ''
                 };
-                await addRowWithBalance(sheetCredit, rowCredit);
+                await addOperationToSheet(sheetCredit, rowCredit);
             }
         } else if (formData.operation === 'Перевод между СВОИМИ компаниями') {
             // Аналогично переводу между счетами
@@ -134,7 +168,7 @@ async function addToAccountSheet(formData) {
                     'Статус': formData.status || 'активна',
                     'Комментарии': formData.comments || ''
                 };
-                await addRowWithBalance(sheetDebit, rowDebit);
+                await addOperationToSheet(sheetDebit, rowDebit);
             }
             if (sheetCredit) {
                 let rowCredit = {
@@ -148,7 +182,7 @@ async function addToAccountSheet(formData) {
                     'Статус': formData.status || 'активна',
                     'Комментарии': formData.comments || ''
                 };
-                await addRowWithBalance(sheetCredit, rowCredit);
+                await addOperationToSheet(sheetCredit, rowCredit);
             }
         }
         return { success: true };
