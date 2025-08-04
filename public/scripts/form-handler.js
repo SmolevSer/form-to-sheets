@@ -9,20 +9,17 @@ let operationCounter = 0;
 // Выбор компании
 function selectCompany(company) {
   selectedCompany = company;
-  
   // Обновляем активные кнопки
   document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
   document.getElementById(`btn-company-${getCompanyId(company)}`).classList.add('active');
-  
   // Показываем секцию выбора операции
   document.getElementById('operation-section').classList.remove('hidden');
-  
   // Обновляем опции счетов для переводов между компаниями
   updateTransferCompanyOptions();
-  
   // Сбрасываем выбор операции и последующие секции
   resetFromOperation();
 }
+window.selectCompany = selectCompany;
 
 // Получение ID компании для кнопок
 function getCompanyId(company) {
@@ -37,15 +34,12 @@ function getCompanyId(company) {
 // Выбор операции
 function selectOperation(operation) {
   selectedOperation = operation;
-  
   // Обновляем активные кнопки в секции операций
   const operationSection = document.getElementById('operation-section');
   operationSection.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
   event.target.classList.add('active');
-  
   // Показываем соответствующие секции
   hideAllOperationBlocks();
-  
   if (operation === 'Перевод между счетами') {
     document.getElementById('account-section').classList.remove('hidden');
     updateAccountOptions();
@@ -56,25 +50,24 @@ function selectOperation(operation) {
     document.getElementById('account-section').classList.remove('hidden');
     updateAccountOptions();
   }
-  
   // Сбрасываем выбор счета
   selectedAccount = '';
   const accountSection = document.getElementById('account-section');
   accountSection.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
 }
+window.selectOperation = selectOperation;
 
 // Выбор счета
 function selectAccount(account) {
   selectedAccount = account;
-  
   // Обновляем активные кнопки в секции счетов
   const accountSection = document.getElementById('account-section');
   accountSection.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
   event.target.classList.add('active');
-  
   // Показываем соответствующий блок операции
   showOperationBlock();
 }
+window.selectAccount = selectAccount;
 
 // Показать соответствующий блок операции
 function showOperationBlock() {
