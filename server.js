@@ -1,3 +1,86 @@
+// ID основной Google-таблицы с листами счетов
+const MAIN_SPREADSHEET_ID = process.env.MAIN_SPREADSHEET_ID || 'ВАШ_ID_ОСНОВНОЙ_ТАБЛИЦЫ';
+
+// Названия листов-счетов
+const ACCOUNT_SHEET_NAMES = [
+  'Касса',
+  'ИП-7435',
+  'ИП-3564',
+  'ИП-Акбарс',
+  'АНО-Сбер'
+];
+
+// Добавление операции в нужный лист счета
+async function addToAccountSheet(formData) {
+    try {
+        const serviceAccountAuth = new JWT({
+            key: process.env.GOOGLE_CREDENTIALS ? JSON.parse(process.env.GOOGLE_CREDENTIALS).private_key : undefined,
+            email: process.env.GOOGLE_CREDENTIALS ? JSON.parse(process.env.GOOGLE_CREDENTIALS).client_email : undefined,
+            keyFile: process.env.GOOGLE_CREDENTIALS ? undefined : path.join(__dirname, 'credentials.json'),
+            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+        const doc = new GoogleSpreadsheet(MAIN_SPREADSHEET_ID, serviceAccountAuth);
+        await doc.loadInfo();
+
+        // Формируем строку для листа счета
+        const row = {
+            'Дата и время': formData.timestamp,
+            'Тип операции': formData.operation,
+            'Приход': '',
+            'Расход': '',
+            'Остаток на начало дня': '',
+            'Остаток текущий': '',
+            'Контрагент': formData.contractor || '',
+            'Статус': formData.status || 'активна',
+            'Комментарии': formData.comments || ''
+        };
+
+        // Определяем, в какой лист и в какие столбцы писать
+        if (formData.operation === 'Приход') {
+            // Приход — в лист выбранного счета, сумма в "Приход"
+            const sheet = doc.sheetsByTitle[formData.accountDebit];
+            if (sheet) {
+                row['Приход'] = formData.amount || '';
+                await sheet.addRow(row);
+            }
+        } else if (formData.operation === 'Расход') {
+            // Расход — в лист выбранного счета, сумма в "Расход"
+            const sheet = doc.sheetsByTitle[formData.accountDebit];
+            if (sheet) {
+                row['Расход'] = formData.amount || '';
+                await sheet.addRow(row);
+            }
+        } else if (formData.operation === 'Перевод между счетами') {
+            // Списание — из accountDebit, приход — в accountCredit
+            const sheetDebit = doc.sheetsByTitle[formData.accountDebit];
+            const sheetCredit = doc.sheetsByTitle[formData.accountCredit];
+            if (sheetDebit) {
+                let rowDebit = { ...row, 'Расход': formData.amount || '', 'Тип операции': 'Перевод (списание)' };
+                await sheetDebit.addRow(rowDebit);
+            }
+            if (sheetCredit) {
+                let rowCredit = { ...row, 'Приход': formData.amount || '', 'Тип операции': 'Перевод (зачисление)' };
+                await sheetCredit.addRow(rowCredit);
+            }
+        } else if (formData.operation === 'Перевод между СВОИМИ компаниями') {
+            // Аналогично переводу между счетами
+            const sheetDebit = doc.sheetsByTitle[formData.accountDebit];
+            const sheetCredit = doc.sheetsByTitle[formData.accountCredit];
+            if (sheetDebit) {
+                let rowDebit = { ...row, 'Расход': formData.amount || '', 'Тип операции': 'Перевод между компаниями (списание)' };
+                await sheetDebit.addRow(rowDebit);
+            }
+            if (sheetCredit) {
+                let rowCredit = { ...row, 'Приход': formData.amount || '', 'Тип операции': 'Перевод между компаниями (зачисление)' };
+                await sheetCredit.addRow(rowCredit);
+            }
+        }
+        return { success: true };
+    } catch (error) {
+        console.error('Ошибка при добавлении в лист счета:', error);
+        return { success: false, error: error.message };
+    }
+}
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -380,17 +463,16 @@ app.post('/api/contractors/add', requireAuth, async (req, res) => {
 app.post('/submit-operation', requireAuth, async (req, res) => {
     try {
         const formData = req.body;
-        
         // Добавляем пользователя из сессии
         formData.login = req.session.user;
-        
         if (!formData.status) {
             formData.status = 'активна';
         }
-        
+        // Сначала добавляем в журнал операций
         const result = await addToGoogleSheets(formData);
-        
+        // Если успешно — добавляем в лист счета
         if (result.success) {
+            await addToAccountSheet(formData);
             res.json({ success: true, message: 'Операция успешно сохранена' });
         } else {
             res.json({ success: false, message: result.error });
