@@ -1,5 +1,5 @@
 // ID основной Google-таблицы с листами счетов
-const MAIN_SPREADSHEET_ID = process.env.MAIN_SPREADSHEET_ID || 'ВАШ_ID_ОСНОВНОЙ_ТАБЛИЦЫ';
+// (объявление уже есть выше, не дублируем)
 
 // Названия листов-счетов
 const ACCOUNT_SHEET_NAMES = [
@@ -19,7 +19,7 @@ async function addToAccountSheet(formData) {
             keyFile: process.env.GOOGLE_CREDENTIALS ? undefined : path.join(__dirname, 'credentials.json'),
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
-        const doc = new GoogleSpreadsheet(MAIN_SPREADSHEET_ID, serviceAccountAuth);
+        const doc = new GoogleSpreadsheet(GOOGLE_SHEET_ID, serviceAccountAuth);
         await doc.loadInfo();
 
         // Формируем строку для листа счета
