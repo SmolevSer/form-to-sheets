@@ -40,11 +40,13 @@ async function addToAccountSheet(formData) {
         async function addOperationToSheet(sheet, row) {
             const rows = await sheet.getRows();
             let lastCurrent = 0;
-            if (rows.length > 0) {
-                const prev = rows[rows.length - 1];
-                // Убираем все пробелы, неразрывные пробелы и приводим к числу
-                let prevValue = (prev['Остаток текущий'] || '0').toString().replace(/\s|\u00A0/g, '').replace(',', '.');
-                lastCurrent = parseFloat(prevValue) || 0;
+            // Ищем последнюю валидную строку с числовым Остаток текущий
+            for (let i = rows.length - 1; i >= 0; i--) {
+                let val = (rows[i]['Остаток текущий'] || '').toString().replace(/\s|\u00A0/g, '').replace(',', '.');
+                if (val && !isNaN(parseFloat(val))) {
+                    lastCurrent = parseFloat(val);
+                    break;
+                }
             }
             let prihod = parseFloat((row['Приход'] || '0').toString().replace(',', '.')) || 0;
             let rashod = parseFloat((row['Расход'] || '0').toString().replace(',', '.')) || 0;
