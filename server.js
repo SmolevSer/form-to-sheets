@@ -38,30 +38,34 @@ async function addToAccountSheet(formData) {
 
         // Универсальная функция для добавления операции в нужный лист (расчет только "Остаток текущий" по предыдущей строке)
         async function addOperationToSheet(sheet, row) {
-            const rows = await sheet.getRows();
-            let lastCurrent = 0;
-            // Ищем последнюю валидную строку с числовым Остаток текущий
-            for (let i = rows.length - 1; i >= 0; i--) {
-                let val = (rows[i]['Остаток текущий'] || '').toString().replace(/\s|\u00A0/g, '').replace(',', '.');
-                if (val && !isNaN(parseFloat(val))) {
-                    lastCurrent = parseFloat(val);
-                    break;
-                }
-            }
-            let prihod = parseFloat((row['Приход'] || '0').toString().replace(',', '.')) || 0;
-            let rashod = parseFloat((row['Расход'] || '0').toString().replace(',', '.')) || 0;
-            // Если это первая строка и явно задан остаток — не пересчитываем, просто сохраняем
-            if (rows.length === 0 && row['Остаток текущий']) {
-                row['Остаток текущий'] = row['Остаток текущий'];
-            } else {
-                row['Остаток текущий'] = (lastCurrent + prihod - rashod).toFixed(2).replace('.', ',');
-            }
-            // Добавляем только новую строку
+            // Добавляем новую строку
             const newRow = {};
             for (const key of accountRowTemplate) {
                 newRow[key] = row[key] || '';
             }
             await sheet.addRow(newRow);
+
+            // Пересчитываем все строки по классической формуле накопления
+            const rows = await sheet.getRows();
+            let lastCurrent = 0;
+            for (let i = 0; i < rows.length; i++) {
+                let prihod = parseFloat((rows[i]['Приход'] || '0').toString().replace(',', '.')) || 0;
+                let rashod = parseFloat((rows[i]['Расход'] || '0').toString().replace(',', '.')) || 0;
+                if (i === 0) {
+                    // Если в первой строке явно задан остаток — используем его, иначе считаем
+                    let val = (rows[i]['Остаток текущий'] || '').toString().replace(/\s|\u00A0/g, '').replace(',', '.');
+                    if (val && !isNaN(parseFloat(val))) {
+                        lastCurrent = parseFloat(val);
+                    } else {
+                        lastCurrent = prihod - rashod;
+                    }
+                    rows[i]['Остаток текущий'] = lastCurrent.toFixed(2).replace('.', ',');
+                } else {
+                    lastCurrent = lastCurrent + prihod - rashod;
+                    rows[i]['Остаток текущий'] = lastCurrent.toFixed(2).replace('.', ',');
+                }
+                await rows[i].save();
+            }
         }
 
         // --- Операции ---
