@@ -67,8 +67,8 @@ async function addToAccountSheet(formData) {
             // Классическая логика: Остаток текущий = Остаток текущий предыдущей строки + приход - расход
             let lastCurrent = 0;
             for (let i = 0; i < allRows.length; i++) {
-                let prihod = parseFloat(allRows[i]['Приход'] || 0) || 0;
-                let rashod = parseFloat(allRows[i]['Расход'] || 0) || 0;
+                let prihod = parseFloat((allRows[i]['Приход'] || '0').toString().replace(',', '.')) || 0;
+                let rashod = parseFloat((allRows[i]['Расход'] || '0').toString().replace(',', '.')) || 0;
                 allRows[i]['Остаток на начало дня'] = lastCurrent;
                 allRows[i]['Остаток текущий'] = (lastCurrent + prihod - rashod).toFixed(2);
                 lastCurrent = parseFloat(allRows[i]['Остаток текущий']);
