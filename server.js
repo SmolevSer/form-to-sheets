@@ -40,6 +40,7 @@ async function addToAccountSheet(formData) {
         async function addOperationToSheet(sheet, row) {
             const rows = await sheet.getRows();
             // Если нет строк — первая строка, просто добавляем с остатком на начало дня = приход - расход
+
             if (rows.length === 0) {
                 let prihod = parseFloat(row['Приход'] || 0) || 0;
                 let rashod = parseFloat(row['Расход'] || 0) || 0;
@@ -59,14 +60,23 @@ async function addToAccountSheet(formData) {
                 }
                 return dateStr;
             }
+            // Для корректного расчета: остаток на начало дня = остаток текущий последней строки
             const sortedRows = rows.slice().sort((a, b) => toISO(a['Дата оплаты']).localeCompare(toISO(b['Дата оплаты'])));
             const lastRow = sortedRows[sortedRows.length - 1];
             const lastDate = toISO(lastRow['Дата оплаты']);
             const newDate = toISO(row['Дата оплаты']);
 
-            // Если новая операция позже всех — просто добавляем, расчет от последнего остатка
+            // Если новая операция позже всех — расчет от последнего остатка
             if (newDate >= lastDate) {
-                let lastBalance = parseFloat(lastRow['Остаток текущий'] || lastRow['Остаток на начало дня'] || 0) || 0;
+                // Найти последний не пустой остаток текущий
+                let lastBalance = 0;
+                for (let i = sortedRows.length - 1; i >= 0; i--) {
+                    let val = sortedRows[i]['Остаток текущий'];
+                    if (val !== undefined && val !== '' && !isNaN(parseFloat(val))) {
+                        lastBalance = parseFloat(val);
+                        break;
+                    }
+                }
                 let prihod = parseFloat(row['Приход'] || 0) || 0;
                 let rashod = parseFloat(row['Расход'] || 0) || 0;
                 row['Остаток на начало дня'] = lastBalance;
