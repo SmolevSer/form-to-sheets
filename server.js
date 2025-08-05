@@ -39,14 +39,19 @@ async function addToAccountSheet(formData) {
         // Универсальная функция для добавления операции в нужный лист (расчет только "Остаток текущий" по предыдущей строке)
         async function addOperationToSheet(sheet, row) {
             const rows = await sheet.getRows();
-            let lastCurrent = 0;
-            if (rows.length > 0) {
-                const prev = rows[rows.length - 1];
-                lastCurrent = parseFloat((prev['Остаток текущий'] || '0').toString().replace(',', '.')) || 0;
+            if (rows.length === 0 && row['Остаток текущий']) {
+                // Если это первая строка и явно задан остаток — не пересчитываем, просто сохраняем
+                row['Остаток текущий'] = row['Остаток текущий'];
+            } else {
+                let lastCurrent = 0;
+                if (rows.length > 0) {
+                    const prev = rows[rows.length - 1];
+                    lastCurrent = parseFloat((prev['Остаток текущий'] || '0').toString().replace(',', '.')) || 0;
+                }
+                let prihod = parseFloat((row['Приход'] || '0').toString().replace(',', '.')) || 0;
+                let rashod = parseFloat((row['Расход'] || '0').toString().replace(',', '.')) || 0;
+                row['Остаток текущий'] = (lastCurrent + prihod - rashod).toFixed(2).replace('.', ',');
             }
-            let prihod = parseFloat((row['Приход'] || '0').toString().replace(',', '.')) || 0;
-            let rashod = parseFloat((row['Расход'] || '0').toString().replace(',', '.')) || 0;
-            row['Остаток текущий'] = (lastCurrent + prihod - rashod).toFixed(2).replace('.', ',');
             // Добавляем только новую строку
             const newRow = {};
             for (const key of accountRowTemplate) {
