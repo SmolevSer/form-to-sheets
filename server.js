@@ -36,53 +36,20 @@ async function addToAccountSheet(formData) {
             'Комментарии'
         ];
 
-        // Универсальная функция для добавления операции в нужный лист
+        // Универсальная функция для добавления операции в нужный лист (только добавление новой строки, расчет остатка по предыдущей строке)
         async function addOperationToSheet(sheet, row) {
             const rows = await sheet.getRows();
-            // Собираем все строки + новую, сортируем по дате оплаты
-            function toISO(dateStr) {
-                if (!dateStr) return '';
-                if (dateStr.includes('-')) return dateStr;
-                if (dateStr.includes('.')) {
-                    const [d, m, y] = dateStr.split('.');
-                    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-                }
-                return dateStr;
-            }
-            const allRows = rows.map(r => ({
-                'Дата оплаты': r['Дата оплаты'],
-                'Тип операции': r['Тип операции'],
-                'Приход': r['Приход'],
-                'Расход': r['Расход'],
-                'Остаток на начало дня': r['Остаток на начало дня'],
-                'Остаток текущий': r['Остаток текущий'],
-                'Контрагент': r['Контрагент'],
-                'Статус': r['Статус'],
-                'Комментарии': r['Комментарии'],
-                _row: r
-            }));
-            allRows.push({ ...row, _row: null });
-            allRows.sort((a, b) => toISO(a['Дата оплаты']).localeCompare(toISO(b['Дата оплаты'])));
-
-            // Классическая логика: Остаток текущий = Остаток текущий предыдущей строки + приход - расход
             let lastCurrent = 0;
-            for (let i = 0; i < allRows.length; i++) {
-                let prihod = parseFloat((allRows[i]['Приход'] || '0').toString().replace(',', '.')) || 0;
-                let rashod = parseFloat((allRows[i]['Расход'] || '0').toString().replace(',', '.')) || 0;
-                allRows[i]['Остаток на начало дня'] = lastCurrent;
-                allRows[i]['Остаток текущий'] = (lastCurrent + prihod - rashod).toFixed(2);
-                lastCurrent = parseFloat(allRows[i]['Остаток текущий']);
+            if (rows.length > 0) {
+                // Берем остаток текущий из последней строки
+                const prev = rows[rows.length - 1];
+                lastCurrent = parseFloat((prev['Остаток текущий'] || '0').toString().replace(',', '.')) || 0;
             }
-            // Обновляем существующие строки
-            for (let i = 0; i < allRows.length; i++) {
-                if (allRows[i]._row) {
-                    for (const key of accountRowTemplate) {
-                        allRows[i]._row.set(key, allRows[i][key]);
-                    }
-                    await allRows[i]._row.save();
-                }
-            }
-            // Добавляем новую строку
+            let prihod = parseFloat((row['Приход'] || '0').toString().replace(',', '.')) || 0;
+            let rashod = parseFloat((row['Расход'] || '0').toString().replace(',', '.')) || 0;
+            row['Остаток на начало дня'] = lastCurrent;
+            row['Остаток текущий'] = (lastCurrent + prihod - rashod).toFixed(2);
+            // Добавляем только новую строку
             const newRow = {};
             for (const key of accountRowTemplate) {
                 newRow[key] = row[key] || '';
