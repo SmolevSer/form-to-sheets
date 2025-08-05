@@ -46,7 +46,7 @@ async function addToAccountSheet(formData) {
             }
             let prihod = parseFloat((row['Приход'] || '0').toString().replace(',', '.')) || 0;
             let rashod = parseFloat((row['Расход'] || '0').toString().replace(',', '.')) || 0;
-            row['Остаток текущий'] = (lastCurrent + prihod - rashod).toFixed(2).replace(',', '.');
+            row['Остаток текущий'] = (lastCurrent + prihod - rashod).toFixed(2).replace('.', ',');
             // Добавляем только новую строку
             const newRow = {};
             for (const key of accountRowTemplate) {
