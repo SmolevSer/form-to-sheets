@@ -57,12 +57,10 @@ async function addToAccountSheet(formData) {
             allRows.push({ ...row, _row: null });
             // Сортируем по "Дата оплаты" (формат YYYY-MM-DD или DD.MM.YYYY)
             allRows.sort((a, b) => {
-                // Преобразуем дату к ISO для сравнения
                 function toISO(dateStr) {
                     if (!dateStr) return '';
-                    if (dateStr.includes('-')) return dateStr; // уже ISO
+                    if (dateStr.includes('-')) return dateStr;
                     if (dateStr.includes('.')) {
-                        // DD.MM.YYYY
                         const [d, m, y] = dateStr.split('.');
                         return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                     }
@@ -70,14 +68,29 @@ async function addToAccountSheet(formData) {
                 }
                 return toISO(a['Дата оплаты']).localeCompare(toISO(b['Дата оплаты']));
             });
-            // Пересчитываем остатки по дням
+
+            // --- Исправление: если первая строка — это строка с остатком (нет операции, есть остаток на начало дня и текущий остаток),
+            // используем её как стартовый баланс, а пересчёт начинаем со второй строки ---
             let lastBalance = 0;
+            let startIndex = 0;
+            if (allRows.length > 0) {
+                const first = allRows[0];
+                const isStartRow = (!first['Тип операции'] || first['Тип операции'] === '') &&
+                    (first['Остаток на начало дня'] !== undefined && first['Остаток на начало дня'] !== '' && !isNaN(parseFloat(first['Остаток на начало дня']))) &&
+                    (first['Остаток текущий'] !== undefined && first['Остаток текущий'] !== '' && !isNaN(parseFloat(first['Остаток текущий'])));
+                if (isStartRow) {
+                    lastBalance = parseFloat(first['Остаток текущий']) || 0;
+                    // Обновим на всякий случай остаток на начало дня тоже
+                    first['Остаток на начало дня'] = lastBalance;
+                    first['Остаток текущий'] = lastBalance;
+                    startIndex = 1;
+                }
+            }
             let lastDay = '';
-            let startOfDayBalance = 0;
-            for (let i = 0; i < allRows.length; i++) {
+            let startOfDayBalance = lastBalance;
+            for (let i = startIndex; i < allRows.length; i++) {
                 const r = allRows[i];
                 const day = r['Дата оплаты'];
-                // Если новый день — фиксируем остаток на начало дня
                 if (day !== lastDay) {
                     startOfDayBalance = lastBalance;
                     lastDay = day;
