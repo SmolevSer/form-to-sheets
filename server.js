@@ -36,19 +36,17 @@ async function addToAccountSheet(formData) {
             'Комментарии'
         ];
 
-        // Универсальная функция для добавления операции в нужный лист (только добавление новой строки, расчет остатка по предыдущей строке)
+        // Универсальная функция для добавления операции в нужный лист (расчет только "Остаток текущий" по предыдущей строке)
         async function addOperationToSheet(sheet, row) {
             const rows = await sheet.getRows();
             let lastCurrent = 0;
             if (rows.length > 0) {
-                // Берем остаток текущий из последней строки
                 const prev = rows[rows.length - 1];
                 lastCurrent = parseFloat((prev['Остаток текущий'] || '0').toString().replace(',', '.')) || 0;
             }
             let prihod = parseFloat((row['Приход'] || '0').toString().replace(',', '.')) || 0;
             let rashod = parseFloat((row['Расход'] || '0').toString().replace(',', '.')) || 0;
-            row['Остаток на начало дня'] = lastCurrent;
-            row['Остаток текущий'] = (lastCurrent + prihod - rashod).toFixed(2);
+            row['Остаток текущий'] = (lastCurrent + prihod - rashod).toFixed(2).replace(',', '.');
             // Добавляем только новую строку
             const newRow = {};
             for (const key of accountRowTemplate) {
