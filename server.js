@@ -52,18 +52,17 @@ async function addToAccountSheet(formData) {
                 let prihod = parseFloat((rows[i]['Приход'] || '0').toString().replace(',', '.')) || 0;
                 let rashod = parseFloat((rows[i]['Расход'] || '0').toString().replace(',', '.')) || 0;
                 if (i === 0) {
-                    // Если в первой строке явно задан остаток — используем его, иначе считаем
+                    // Если в первой строке явно задан остаток — используем его как стартовый, но всегда перезаписываем
                     let val = (rows[i]['Остаток текущий'] || '').toString().replace(/\s|\u00A0/g, '').replace(',', '.');
                     if (val && !isNaN(parseFloat(val))) {
                         lastCurrent = parseFloat(val);
                     } else {
                         lastCurrent = prihod - rashod;
                     }
-                    rows[i]['Остаток текущий'] = lastCurrent.toFixed(2).replace('.', ',');
                 } else {
                     lastCurrent = lastCurrent + prihod - rashod;
-                    rows[i]['Остаток текущий'] = lastCurrent.toFixed(2).replace('.', ',');
                 }
+                rows[i]['Остаток текущий'] = lastCurrent.toFixed(2).replace('.', ',');
                 await rows[i].save();
             }
         }
