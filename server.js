@@ -54,12 +54,34 @@ async function addToAccountSheet(formData) {
                 const rows = await sheet.getRows();
                 console.log(`Всего строк в листе: ${rows.length}`);
                 
+                // Отладка: смотрим названия столбцов
+                if (rows.length > 0) {
+                    console.log('Доступные столбцы:', Object.keys(rows[0]._rawData));
+                    console.log('Заголовки листа:', sheet.headerValues);
+                }
+                
                 let currentBalance = 0;
                 
                 // Последовательно рассчитываем остаток для каждой строки
                 for (let i = 0; i < rows.length; i++) {
-                    let prihod = parseFloat((rows[i]['Приход'] || '0').toString().replace(',', '.')) || 0;
-                    let rashod = parseFloat((rows[i]['Расход'] || '0').toString().replace(',', '.')) || 0;
+                    // Отладка: смотрим что API возвращает
+                    console.log(`Строка ${i + 1} RAW данные:`, {
+                        'Приход_raw': rows[i]['Приход'],
+                        'Расход_raw': rows[i]['Расход'],
+                        'Остаток на начало дня_raw': rows[i]['Остаток на начало дня'],
+                        'Остаток текущий_raw': rows[i]['Остаток текущий']
+                    });
+                    
+                    let prihodRaw = (rows[i]['Приход'] || '0').toString();
+                    let rashodRaw = (rows[i]['Расход'] || '0').toString();
+                    
+                    console.log(`Строка ${i + 1} после toString:`, {
+                        'Приход_str': prihodRaw,
+                        'Расход_str': rashodRaw
+                    });
+                    
+                    let prihod = parseFloat(prihodRaw.replace(',', '.')) || 0;
+                    let rashod = parseFloat(rashodRaw.replace(',', '.')) || 0;
                     
                     console.log(`Строка ${i + 1}: Приход=${prihod}, Расход=${rashod}`);
                     
