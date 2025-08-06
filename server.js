@@ -50,6 +50,9 @@ async function addToAccountSheet(formData) {
                 await sheet.addRow(newRow);
                 console.log('Новая строка добавлена успешно');
 
+                // ВАЖНО: Обновляем заголовки листа перед чтением данных
+                await sheet.loadHeaderRow();
+
                 // Пересчитываем все строки по классической формуле накопления
                 const rows = await sheet.getRows();
                 console.log(`Всего строк в листе: ${rows.length}`);
@@ -72,12 +75,28 @@ async function addToAccountSheet(formData) {
                         'Остаток текущий_raw': rows[i]['Остаток текущий']
                     });
                     
-                    let prihodRaw = (rows[i]['Приход'] || '0').toString();
-                    let rashodRaw = (rows[i]['Расход'] || '0').toString();
+                    // Пробуем получить данные по индексам (если по названиям не работает)
+                    console.log(`Строка ${i + 1} по индексам:`, {
+                        'col2_Приход': rows[i]._rawData[2],
+                        'col3_Расход': rows[i]._rawData[3], 
+                        'col4_ОстатокНаНачало': rows[i]._rawData[4],
+                        'col5_ОстатокТекущий': rows[i]._rawData[5]
+                    });
+                    
+                    // Пытаемся получить значения и по названиям, и по индексам
+                    let prihodRaw = rows[i]['Приход'] || rows[i]._rawData[2] || '0';
+                    let rashodRaw = rows[i]['Расход'] || rows[i]._rawData[3] || '0';
+                    let startBalanceRaw = rows[i]['Остаток на начало дня'] || rows[i]._rawData[4] || '0';
+                    let existingBalanceRaw = rows[i]['Остаток текущий'] || rows[i]._rawData[5] || '';
+                    
+                    prihodRaw = prihodRaw.toString();
+                    rashodRaw = rashodRaw.toString();
                     
                     console.log(`Строка ${i + 1} после toString:`, {
                         'Приход_str': prihodRaw,
-                        'Расход_str': rashodRaw
+                        'Расход_str': rashodRaw,
+                        'ОстатокНаНачало_str': startBalanceRaw.toString(),
+                        'ОстатокТекущий_str': existingBalanceRaw.toString()
                     });
                     
                     let prihod = parseFloat(prihodRaw.replace(',', '.')) || 0;
@@ -87,18 +106,15 @@ async function addToAccountSheet(formData) {
                     
                     if (i === 0) {
                         // Для первой строки: либо используем "Остаток на начало дня", либо рассчитываем
-                        const startBalance = (rows[0]['Остаток на начало дня'] || '0').toString().replace(/\s|\u00A0/g, '').replace(',', '.');
-                        const existingBalance = (rows[0]['Остаток текущий'] || '').toString().replace(/\s|\u00A0/g, '').replace(',', '.');
+                        console.log(`Первая строка - Остаток на начало дня: "${startBalanceRaw}", Остаток текущий: "${existingBalanceRaw}"`);
                         
-                        console.log(`Первая строка - Остаток на начало дня: "${startBalance}", Остаток текущий: "${existingBalance}"`);
-                        
-                        if (existingBalance && !isNaN(parseFloat(existingBalance))) {
+                        if (existingBalanceRaw && existingBalanceRaw.toString().trim() && !isNaN(parseFloat(existingBalanceRaw.toString().replace(/\s|\u00A0/g, '').replace(',', '.')))) {
                             // Если остаток уже есть, пересчитываем с учетом операции первой строки
-                            const startValue = parseFloat(startBalance) || 0;
+                            const startValue = parseFloat(startBalanceRaw.toString().replace(/\s|\u00A0/g, '').replace(',', '.')) || 0;
                             currentBalance = startValue + prihod - rashod;
                         } else {
                             // Если остатка нет, рассчитываем с "Остаток на начало дня"
-                            currentBalance = (parseFloat(startBalance) || 0) + prihod - rashod;
+                            currentBalance = (parseFloat(startBalanceRaw.toString().replace(/\s|\u00A0/g, '').replace(',', '.')) || 0) + prihod - rashod;
                         }
                     } else {
                         // Для остальных строк: накопительный расчет
