@@ -38,34 +38,63 @@ async function addToAccountSheet(formData) {
 
         // Универсальная функция для добавления операции в нужный лист с правильным расчетом остатков
         async function addOperationToSheet(sheet, row) {
-            // Добавляем новую строку
-            const newRow = {};
-            for (const key of accountRowTemplate) {
-                newRow[key] = row[key] || '';
-            }
-            await sheet.addRow(newRow);
+            try {
+                console.log('=== НАЧАЛО addOperationToSheet ===');
+                console.log('Добавляемая строка:', JSON.stringify(row));
+                
+                // Добавляем новую строку
+                const newRow = {};
+                for (const key of accountRowTemplate) {
+                    newRow[key] = row[key] || '';
+                }
+                await sheet.addRow(newRow);
+                console.log('Новая строка добавлена успешно');
 
-            // Пересчитываем все строки по классической формуле накопления
-            const rows = await sheet.getRows();
-            
-            // Определяем стартовый остаток из "Остаток на начало дня" первой строки или 0
-            let currentBalance = 0;
-            if (rows.length > 0) {
-                const startBalance = (rows[0]['Остаток на начало дня'] || '0').toString().replace(/\s|\u00A0/g, '').replace(',', '.');
-                currentBalance = parseFloat(startBalance) || 0;
-            }
-            
-            // Последовательно рассчитываем остаток для каждой строки
-            for (let i = 0; i < rows.length; i++) {
-                let prihod = parseFloat((rows[i]['Приход'] || '0').toString().replace(',', '.')) || 0;
-                let rashod = parseFloat((rows[i]['Расход'] || '0').toString().replace(',', '.')) || 0;
+                // Пересчитываем все строки по классической формуле накопления
+                const rows = await sheet.getRows();
+                console.log(`Всего строк в листе: ${rows.length}`);
                 
-                // Накопительный расчет: текущий остаток = предыдущий остаток + приход - расход
-                currentBalance = currentBalance + prihod - rashod;
+                let currentBalance = 0;
                 
-                // Сохраняем рассчитанный остаток
-                rows[i]['Остаток текущий'] = currentBalance.toFixed(2).replace('.', ',');
-                await rows[i].save();
+                // Последовательно рассчитываем остаток для каждой строки
+                for (let i = 0; i < rows.length; i++) {
+                    let prihod = parseFloat((rows[i]['Приход'] || '0').toString().replace(',', '.')) || 0;
+                    let rashod = parseFloat((rows[i]['Расход'] || '0').toString().replace(',', '.')) || 0;
+                    
+                    console.log(`Строка ${i + 1}: Приход=${prihod}, Расход=${rashod}`);
+                    
+                    if (i === 0) {
+                        // Для первой строки: либо используем "Остаток на начало дня", либо рассчитываем
+                        const startBalance = (rows[0]['Остаток на начало дня'] || '0').toString().replace(/\s|\u00A0/g, '').replace(',', '.');
+                        const existingBalance = (rows[0]['Остаток текущий'] || '').toString().replace(/\s|\u00A0/g, '').replace(',', '.');
+                        
+                        console.log(`Первая строка - Остаток на начало дня: "${startBalance}", Остаток текущий: "${existingBalance}"`);
+                        
+                        if (existingBalance && !isNaN(parseFloat(existingBalance))) {
+                            // Если остаток уже есть, пересчитываем с учетом операции первой строки
+                            const startValue = parseFloat(startBalance) || 0;
+                            currentBalance = startValue + prihod - rashod;
+                        } else {
+                            // Если остатка нет, рассчитываем с "Остаток на начало дня"
+                            currentBalance = (parseFloat(startBalance) || 0) + prihod - rashod;
+                        }
+                    } else {
+                        // Для остальных строк: накопительный расчет
+                        currentBalance = currentBalance + prihod - rashod;
+                    }
+                    
+                    console.log(`Строка ${i + 1}: Остаток текущий = ${currentBalance}`);
+                    
+                    // Сохраняем рассчитанный остаток
+                    rows[i]['Остаток текущий'] = currentBalance.toFixed(2).replace('.', ',');
+                    await rows[i].save();
+                    console.log(`Строка ${i + 1} сохранена`);
+                }
+                
+                console.log('=== КОНЕЦ addOperationToSheet ===');
+            } catch (error) {
+                console.error('Ошибка в addOperationToSheet:', error);
+                throw error;
             }
         }
 
